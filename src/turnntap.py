@@ -95,22 +95,34 @@ class MainApp:
                 msg = self.queue.get(0)
 
                 threadId = msg[0]
-                data = msg[1]
+                color = msg[1].strip()
                 
                 print "Value from queue: "
                 print threadId
-                print data
 
-                if data in ("R", "G", "B"):
-                    if prev == "None":
-                        prev = data 
-                    else:
-                        if threadId == 0:
-                            processRotation(data, catPrevious, threadId)
+                c = ["R", "G", "B"]
+                    
+                print type(color)
+                print color in c
+                print color
+                print c
+                
+                if color in c:
+                    print color
+
+                    if threadId == 0:
+                        if self.catPrevious == "None":
+                            self.catPrevious = color
                         else:
-                            processRotation(data, drinkPrevious, threadId)
+                            self.processRotation(color, self.catPrevious, threadId)
+                    else:
+                        if self.drinkPrevious == "None":
+                            self.drinkPrevious = color
+                        else:
+                            self.processRotation(color, self.drinkPrevious, threadId)
                 else:
-                    pressButton(threadId)
+                    pass
+                    #pressButton(threadId)
                 
                 # Check contents of message and do whatever is needed. As a
                 # simple test, print it (in real life, you would
@@ -120,48 +132,52 @@ class MainApp:
                 # expect this branch to be taken in this case
                 pass
 
-    def processRotation(color, prev, threadId):
+    def processRotation(self, color, prev, threadId):
             if ((prev == "G" and color == "R") or
                 (prev == "R" and color == "B") or
                 (prev == "B" and color == "G")):
-               rotateCounterClockwise(threadId, color)
+               self.rotateCounterClockwise(threadId, color)
                
             if ((prev == "B" and color == "R") or
                 (prev == "R" and color == "G") or
                 (prev == "G" and color == "B")):
-               rotateClockwise(threadId, color)
+               self.rotateClockwise(threadId, color)
 
-    def rotateCounterClockwise(id, color):
+    def rotateCounterClockwise(self, id, color):
         if id == 0:
             self.catbox.focus_set()
             current = self.catbox.curselection()[0]
             if current > 0:
-                self.catbox.selectionset(current - 1)
+                self.catbox.selection_clear(0, END)
+                self.catbox.selection_set(current - 1)
 
-            catPrevious = color
+            self.catPrevious = color
         else:
             self.drinkbox.focus_set()
             current = self.drinkbox.curselection()[0]
             if current < 0:
-                self.drinkbox.selectionset(current - 1)
+                self.drinkbox.selection_clear(0, END)
+                self.drinkbox.selection_set(current - 1)
 
-            drinkPrevious = color
+            self.drinkPrevious = color
                 
-    def rotateClockwise(id, color):
+    def rotateClockwise(self, id, color):
         if id == 0:
             self.catbox.focus_set()
             current = self.catbox.curselection()[0]
             if current < self.catbox.size() - 1:
-                self.catbox.selectionset(current + 1)
+                self.catbox.selection_clear(0, END)
+                self.catbox.selection_set(current + 1)
 
-            catPrevious = color
+            self.catPrevious = color
         else:
             self.drinkbox.focus_set()
             current = self.drinkbox.curselection()[0]
             if current < self.drinkbox.size() - 1:
-                self.drinkbox.selectionset(current + 1)
+                self.drinkbox.selection_clear(0, END)
+                self.drinkbox.selection_set(current + 1)
 
-            drinkPrevious = color
+            self.drinkPrevious = color
             
     # Called whenever a change is made to the order to update UI
     def updateOrderListBox(self):
@@ -230,7 +246,7 @@ class ThreadedClient():
         self.queue = Queue.Queue()
         self.running = 1
 
-        self.gui =  MainApp(master, self.queue, self.endApplication) 
+        self.gui = MainApp(master, self.queue, self.endApplication) 
         
         self.thread1 = threading.Thread(target=self.slave, args=(0,"/dev/ttyACM0"))
         self.thread1.start()
@@ -251,14 +267,12 @@ class ThreadedClient():
         self.master.after(200, self.periodicCall)
         
     def slave(self, id, port):
+        print "started a slave"
         ser = serial.Serial(port, 9600)
         while self.running:
             msg = ser.readline()
-
-            if id == 0 and data != catPrevious:
-                self.queue.put((id, msg))
-            if id == 1 and data != drinkPrevious:
-                self.queue.put((id, msg))
+            print msg
+            self.queue.put((id, msg))
                 
     def endApplication(self):
         self.running = 0
