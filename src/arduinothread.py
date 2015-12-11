@@ -23,5 +23,6 @@ class ArduinoThread(threading.Thread):
             line = self.ser.readline()
             logging.debug('read %s', line)
 
-t = ArduinoThread(args=(i,), kwargs={'port':'/dev/ttyACM0'})
-t.start()
+if __name__ == "__main__":
+    t = ArduinoThread(kwargs={'port':'/dev/ttyACM0'})
+    t.start()

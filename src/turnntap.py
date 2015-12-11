@@ -2,9 +2,14 @@ from Tkinter import *
 from threading import Timer
 import tkFont
 import collections
+import threading
+import serial
+import Queue
 
 class MainApp:
-    def __init__(self, master):
+    def __init__(self, master, queue, endCommand):
+        self.queue = queue
+        
         self.master = master
         master.title("Turn N Tap (Exclusive Beta)")
         
@@ -25,6 +30,9 @@ class MainApp:
         self.lbw = 26 # Listbox width in characters
         self.lbh = 14 # Listbox height in rows
 
+        self.catPrevious = "None"
+        self.drinkPrevious = "None"
+        
         self.fnt = tkFont.Font(master, size=20, family="Noto Sans")
     
         self.catlabel = Label(master, text="Type of drink")
@@ -79,7 +87,82 @@ class MainApp:
         master.bind('<space>', self.addToOrder)
         master.bind('<Delete>', self.removeFromOrder)
         master.bind('<Return>', self.sendOrder)
-        
+
+    def processIncoming(self):
+        """Handle all messages currently in the queue, if any."""
+        while self.queue.qsize():
+            try:
+                msg = self.queue.get(0)
+
+                threadId = msg[0]
+                data = msg[1]
+                
+                print "Value from queue: "
+                print threadId
+                print data
+
+                if data in ("R", "G", "B"):
+                    if prev == "None":
+                        prev = data 
+                    else:
+                        if threadId == 0:
+                            processRotation(data, catPrevious, threadId)
+                        else:
+                            processRotation(data, drinkPrevious, threadId)
+                else:
+                    pressButton(threadId)
+                
+                # Check contents of message and do whatever is needed. As a
+                # simple test, print it (in real life, you would
+                # suitably update the GUI's display in a richer fashion).
+            except Queue.Empty:
+                # just on general principles, although we don't
+                # expect this branch to be taken in this case
+                pass
+
+    def processRotation(color, prev, threadId):
+            if ((prev == "G" and color == "R") or
+                (prev == "R" and color == "B") or
+                (prev == "B" and color == "G")):
+               rotateCounterClockwise(threadId, color)
+               
+            if ((prev == "B" and color == "R") or
+                (prev == "R" and color == "G") or
+                (prev == "G" and color == "B")):
+               rotateClockwise(threadId, color)
+
+    def rotateCounterClockwise(id, color):
+        if id == 0:
+            self.catbox.focus_set()
+            current = self.catbox.curselection()[0]
+            if current > 0:
+                self.catbox.selectionset(current - 1)
+
+            catPrevious = color
+        else:
+            self.drinkbox.focus_set()
+            current = self.drinkbox.curselection()[0]
+            if current < 0:
+                self.drinkbox.selectionset(current - 1)
+
+            drinkPrevious = color
+                
+    def rotateClockwise(id, color):
+        if id == 0:
+            self.catbox.focus_set()
+            current = self.catbox.curselection()[0]
+            if current < self.catbox.size() - 1:
+                self.catbox.selectionset(current + 1)
+
+            catPrevious = color
+        else:
+            self.drinkbox.focus_set()
+            current = self.drinkbox.curselection()[0]
+            if current < self.drinkbox.size() - 1:
+                self.drinkbox.selectionset(current + 1)
+
+            drinkPrevious = color
+            
     # Called whenever a change is made to the order to update UI
     def updateOrderListBox(self):
         self.orderbox.delete(0, END)
@@ -140,8 +223,49 @@ class MainApp:
         self.drinkbox.selection_set(0)
         self.drinkbox.activate(0)
 
+class ThreadedClient():
+    def __init__(self, master):
+        self.master = master
+        
+        self.queue = Queue.Queue()
+        self.running = 1
+
+        self.gui =  MainApp(master, self.queue, self.endApplication) 
+        
+        self.thread1 = threading.Thread(target=self.slave, args=(0,"/dev/ttyACM0"))
+        self.thread1.start()
+        
+        #self.thread2 = threading.Thread(target=self.slave, args=("/dev/ttyACM1",))
+        #self.thread2.start()
+        
+        self.periodicCall()
+
+    # Check if queue has any data
+    def periodicCall(self):
+        self.gui.processIncoming()
+        if not self.running:
+            # This is the brutal stop of the system. You may want to do
+            # some cleanup before actually shutting it down.
+            import sys
+            sys.exit(1)
+        self.master.after(200, self.periodicCall)
+        
+    def slave(self, id, port):
+        ser = serial.Serial(port, 9600)
+        while self.running:
+            msg = ser.readline()
+
+            if id == 0 and data != catPrevious:
+                self.queue.put((id, msg))
+            if id == 1 and data != drinkPrevious:
+                self.queue.put((id, msg))
+                
+    def endApplication(self):
+        self.running = 0
+        
 if __name__ == "__main__":
     root = Tk()
-    main = MainApp(root)
+
+    client = ThreadedClient(root)
     root.mainloop()
     
