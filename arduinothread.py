@@ -13,17 +13,15 @@ class ArduinoThread(threading.Thread):
                                   verbose=verbose)
         self.args = args
         self.kwargs = kwargs
-        #self.ser = serial.Serial(kwargs["port"], 9600)
+        self.ser = serial.Serial(kwargs["port"], 9600)
         return
 
     def run(self):
-        logging.debug('running with %s and %s', self.args, self.kwargs)
-        return
-        
-        #while 1:
-        #    line = self.ser.readline()
-        #    print line:
+        logging.debug('running with %s', self.kwargs)
 
-for i in range(5):
-    t = ArduinoThread(args=(i,), kwargs={'port':'/dev/ttyACM0'})
-    t.start()
+        while 1:
+            line = self.ser.readline()
+            logging.debug('read %s', line)
+
+t = ArduinoThread(args=(i,), kwargs={'port':'/dev/ttyACM0'})
+t.start()
