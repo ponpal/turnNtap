@@ -41,7 +41,7 @@ class MainApp:
         self.catlabel.grid(row=0, column=0)
         
         self.catbox = Listbox(master, exportselection=0,
-                              selectbackground="orangered",
+                              selectbackground="tomato",
                               width=self.lbw, height=self.lbh, bd=10)
         self.catbox["font"] = self.fnt
         self.catbox.bind('<<ListboxSelect>>', self.onSelect)
@@ -54,7 +54,7 @@ class MainApp:
         self.drinklabel.grid(row=0, column=1)
     
         self.drinkbox = Listbox(master, exportselection=0,
-                                selectbackground="lime",
+                                selectbackground="springgreen",
                                 width=self.lbw, height=self.lbh, bd=10)
         self.drinkbox["font"] = self.fnt
         self.drinkbox.grid(row=1, column=1)
@@ -64,7 +64,8 @@ class MainApp:
         self.orderlabel["font"] = self.fnt
         self.orderlabel.grid(row=0, column=2)
 
-        self.orderbox = Listbox(master, width=self.lbw, height=self.lbh, bd=10, bg="paleturquoise")
+        self.orderbox = Listbox(master, width=self.lbw,
+                                height=self.lbh, bd=10, bg="paleturquoise")
         self.orderbox["font"] = self.fnt
         self.orderbox.grid(row=1, column=2)
         self.orderbox["takefocus"] = 0
@@ -94,21 +95,21 @@ class MainApp:
             try:
                 msg = self.queue.get(0)
                 threadId = msg[0]
-                color = msg[1].strip()
+                data = msg[1].strip()
+
+                print "Thread: %d" % threadId + "\tMessage: %d" % data
                 
-                if color in ["R", "G", "B"]:
-                    print color
-                    
+                if data in ["R", "G", "B"]:
                     if threadId == 0:
                         if self.catPrevious != "None":
-                            self.processRotation(color, self.catPrevious, catbox)
+                            self.processRotation(data, self.catPrevious, catbox)
 
-                        self.catPrevious = color
+                        self.catPrevious = data
                     else:
                         if self.drinkPrevious != "None":
-                            self.processRotation(color, self.drinkPrevious, drinkbox)
+                            self.processRotation(data, self.drinkPrevious, drinkbox)
 
-                        self.drinkPrevious = color
+                        self.drinkPrevious = data
                             
                 else:
                     pass
@@ -254,13 +255,14 @@ class ThreadedClient():
         self.running = 1
 
         self.gui = MainApp(master, self.queue, self.endApplication) 
-        
-        self.thread1 = threading.Thread(target=self.serialreader, args=(0,"/dev/ttyACM0"))
+
+        self.thread1 = threading.Thread(target=self.serialreader,
+                                        args=(0,"/dev/ttyACM0"))
         self.thread1.start()
         
-        #self.thread2 = threading.Thread(target=self.serialreader, args=("/dev/ttyACM1",))
+        #self.thread2 = threading.Thread(target=self.serialreader, args=(1, "/dev/ttyACM1"))
         #self.thread2.start()
-        
+                    
         self.periodicCall()
 
     # Check if queue has any data
@@ -275,17 +277,21 @@ class ThreadedClient():
 
     # Reads a line from the serial input and puts it on the queue
     def serialreader(self, id, port):
-        ser = serial.Serial(port, 9600)
-        while self.running:
-            msg = ser.readline()
-            self.queue.put((id, msg))
+        try:
+            ser = serial.Serial(port, 9600)
+        except serial.SerialException:
+            print ("Couldn't open serial communication port (" +
+                   port  + "), please check your connections.")
+        else:
+            print "Successfully started thread %d" % id + "."
+            while self.running:
+                msg = ser.readline()
+                self.queue.put((id, msg))
                 
     def endApplication(self):
         self.running = 0
         
 if __name__ == "__main__":
     root = Tk()
-
     client = ThreadedClient(root)
     root.mainloop()
-    
