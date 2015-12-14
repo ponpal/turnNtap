@@ -97,17 +97,17 @@ class MainApp:
                 threadId = msg[0]
                 data = msg[1].strip()
 
-                print "Thread: %d" % threadId + "\tMessage: %d" % data
+                #print "Thread: %d" % threadId + "\tMessage: " + data
                 
                 if data in ["R", "G", "B"]:
                     if threadId == 0:
                         if self.catPrevious != "None":
-                            self.processRotation(data, self.catPrevious, catbox)
-
+                            self.processRotation(data, self.catPrevious, self.catbox)
+                            
                         self.catPrevious = data
                     else:
                         if self.drinkPrevious != "None":
-                            self.processRotation(data, self.drinkPrevious, drinkbox)
+                            self.processRotation(data, self.drinkPrevious, self.drinkbox)
 
                         self.drinkPrevious = data
                             
@@ -134,45 +134,15 @@ class MainApp:
 
     def rotate(self, listbox, rotation):
         listbox.focus_set()
-        current = self.catbox.curselection()[0]
+        current = listbox.curselection()[0]
         listbox.selection_clear(0, END)
-        listbox.selection_set((current + rotation) % listbox.size)
-            
-    #def rotateCounterClockwise(self, id, color):
-    #    if id == 0:
-    #        self.catbox.focus_set()
-    #        current = self.catbox.curselection()[0]
-    #        if current > 0:
-    #            self.catbox.selection_clear(0, END)
-    #            self.catbox.selection_set(current - 1)
+        next = (current + rotation) % listbox.size()
 
-    #        self.catPrevious = color
-    #    else:
-    #        self.drinkbox.focus_set()
-    #        current = self.drinkbox.curselection()[0]
-    #        if current < 0:
-    #            self.drinkbox.selection_clear(0, END)
-    #            self.drinkbox.selection_set(current - 1)
+        print "Current: %d" % current + "\tRotation: %d" % rotation
+        print "Going to: %d" % next
+        print ""
 
-    #        self.drinkPrevious = color
-                
-    #def rotateClockwise(self, id, color):
-    #    if id == 0:
-    #        self.catbox.focus_set()
-    #        current = self.catbox.curselection()[0]
-    #        if current < self.catbox.size() - 1:
-    #            self.catbox.selection_clear(0, END)
-    #            self.catbox.selection_set(current + 1)
-
-    #        self.catPrevious = color
-    #    else:
-    #        self.drinkbox.focus_set()
-    #        current = self.drinkbox.curselection()[0]
-    #        if current < self.drinkbox.size() - 1:
-    #            self.drinkbox.selection_clear(0, END)
-    #            self.drinkbox.selection_set(current + 1)
-
-    #        self.drinkPrevious = color
+        listbox.selection_set(next)
             
     # Called whenever a change is made to the order to update UI
     def updateOrderListBox(self):
@@ -260,8 +230,9 @@ class ThreadedClient():
                                         args=(0,"/dev/ttyACM0"))
         self.thread1.start()
         
-        #self.thread2 = threading.Thread(target=self.serialreader, args=(1, "/dev/ttyACM1"))
-        #self.thread2.start()
+        self.thread2 = threading.Thread(target=self.serialreader,
+                                        args=(1, "/dev/ttyACM1"))
+        self.thread2.start()
                     
         self.periodicCall()
 
@@ -273,7 +244,7 @@ class ThreadedClient():
             # some cleanup before actually shutting it down.
             import sys
             sys.exit(1)
-        self.master.after(200, self.periodicCall)
+        self.master.after(24, self.periodicCall)
 
     # Reads a line from the serial input and puts it on the queue
     def serialreader(self, id, port):
