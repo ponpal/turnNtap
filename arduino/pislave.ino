@@ -1,10 +1,18 @@
 #include <Wire.h>
 #include "Adafruit_TCS34725.h"
 
-#define buttonPin 11
+#define rightWheelButton 8
+#define deleteButton 9
+#define tapButton 10 
 #define ledPin1 5
 #define ledPin2 6
 #define ledPin3 7
+
+#define buttonThreshold 250
+
+boolean rwbPressed = false;
+boolean dbPressed = false;
+boolean tbPressed = false;
 
 /* Example code for the Adafruit TCS34725 breakout library */
 
@@ -23,13 +31,15 @@ void setup(void) {
   Serial.begin(9600);
   
   if (tcs.begin()) {
-    Serial.println("Found sensor");
+    //Serial.println("Found sensor");
   } else {
-    Serial.println("No TCS34725 found ... check your connections");
+    //Serial.println("No TCS34725 found ... check your connections");
     while (1);
   }
 
-  pinMode(buttonPin, INPUT);
+  pinMode(rightWheelButton, INPUT);
+  pinMode(deleteButton, INPUT);
+  pinMode(tapButton, INPUT);
   pinMode(ledPin1, OUTPUT);
   pinMode(ledPin2, OUTPUT);
   pinMode(ledPin3, OUTPUT);
@@ -54,17 +64,42 @@ void setLeds(int value) {
   digitalWrite(ledPin3, value);
 }
 
+int analogToDigital(int value) {
+  return (value > buttonThreshold) ? HIGH : LOW;
+}
+
 void loop(void) {
   uint16_t r, g, b, c;
 
-  int buttonVal = analogRead(buttonPin);
-  Serial.println(buttonVal);
+  int rightWheelBVal = digitalRead(rightWheelButton);
+  int deleteBVal = digitalRead(deleteButton);
+  int tapBVal = digitalRead(tapButton);
 
-  if(buttonVal == HIGH) {
-    Serial.println("Button");
-    setLeds(LOW);
-  } else {
-    setLeds(HIGH);
+  if(rightWheelBVal == HIGH) {
+    rwbPressed = true;
+  } 
+
+  if(rwbPressed && rightWheelBVal == LOW) {
+    Serial.println("rightWheelButton");
+    rwbPressed = false;
+  }
+
+  if(deleteBVal == HIGH) {
+    dbPressed = true;
+  }
+
+  if(dbPressed && deleteBVal == LOW) {
+    Serial.println("deleteButton");
+    dbPressed = false;
+  }
+
+  if(tapBVal == HIGH) {
+    tbPressed = true;
+  }
+
+  if(tbPressed && tapBVal == LOW) {
+    Serial.println("tapButton");
+    tbPressed = false;
   }
   
   tcs.getRawData(&r, &g, &b, &c);

@@ -12,6 +12,7 @@ class MainApp:
         self.master.title("Turn N Tap (Exclusive Beta)")
 
         self.queue = queue
+        self.buttonsActive = True
         
         self.categories = ["Beer", "Cocktail", "Spirit", "Wine"]
 
@@ -31,8 +32,8 @@ class MainApp:
         self.lbw = 26 # Listbox width in characters
         self.lbh = 14 # Listbox height in rows
 
-        self.catPrevious = "None"
-        self.drinkPrevious = "None"
+        self.catPrevious = None
+        self.drinkPrevious = None
         
         self.fnt = tkFont.Font(master, size=20, family="Noto Sans")
     
@@ -101,19 +102,25 @@ class MainApp:
                 
                 if data in ["R", "G", "B"]:
                     if threadId == 0:
-                        if self.catPrevious != "None":
+                        if self.catPrevious != None:
                             self.processRotation(data, self.catPrevious, self.catbox)
                             
                         self.catPrevious = data
                     else:
-                        if self.drinkPrevious != "None":
+                        if self.drinkPrevious != None:
                             self.processRotation(data, self.drinkPrevious, self.drinkbox)
 
                         self.drinkPrevious = data
-                            
                 else:
-                    pass
-                    #pressButton(threadId)
+                    if self.buttonsActive:
+                        if data == "rightWheelButton":
+                            self.addToOrder(None)
+                        elif data == "deleteButton":
+                            self.removeFromOrder(None)
+                        elif data == "tapButton":
+                            self.sendOrder(None)
+                        else:
+                            pass
             except Queue.Empty:
                 # just on general principles, although we don't
                 # expect this branch to be taken in this case
@@ -138,9 +145,9 @@ class MainApp:
         listbox.selection_clear(0, END)
         next = (current + rotation) % listbox.size()
 
-        print "Current: %d" % current + "\tRotation: %d" % rotation
-        print "Going to: %d" % next
-        print ""
+        #print "Current: %d" % current + "\tRotation: %d" % rotation
+        #print "Going to: %d" % next
+        #print ""
 
         listbox.selection_set(next)
             
@@ -184,10 +191,14 @@ class MainApp:
 
     def resetinfolabel(self):
         self.infolabel["text"] = self.tutorialtext
+
+    def resetOrderBox(self):
+        self.emptyOrder()
+        self.orderbox["bg"] = "paleturquoise"
         
     def sendOrder(self, evt):
         if self.order:
-            self.emptyOrder()
+            self.orderbox["bg"] = "gray"
             self.infolabel["text"] = "Order sent! The bartender will serve you shortly."
         else:
             self.infolabel["text"] = "Please add some drinks to your order first!"
@@ -196,6 +207,7 @@ class MainApp:
             
         Timer(3, self.resetinfolabel, ()).start()
         Timer(3, self.activateButtons, ()).start()
+        Timer(3, self.resetOrderBox, ()).start()
 
     # Update drink selection according to category
     def onSelect(self, evt):
@@ -208,11 +220,13 @@ class MainApp:
         self.drinkbox.activate(0)
 
     def activateButtons(self):
+        self.buttonsActive = True
         self.master.bind('<space>', self.addToOrder)
         self.master.bind('<Delete>', self.removeFromOrder)
         self.master.bind('<Return>', self.sendOrder)
 
     def deactivateButtons(self):
+        self.buttonsActive = False
         self.master.unbind('<space>')
         self.master.unbind('<Delete>')
         self.master.unbind('<Return>')  
@@ -231,7 +245,7 @@ class ThreadedClient():
         self.thread1.start()
         
         self.thread2 = threading.Thread(target=self.serialreader,
-                                        args=(1, "/dev/ttyACM1"))
+                                        args=(1, "/dev/ttyUSB0"))
         self.thread2.start()
                     
         self.periodicCall()
