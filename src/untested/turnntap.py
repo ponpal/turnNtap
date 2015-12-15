@@ -16,10 +16,10 @@ class MainApp:
         
         self.categories = [" All drinks", " Beer", " Cocktail", " Spirit", " Wine"]
 
-        self.beers     = ["A", "B", "C", "D", "E"]
-        self.cocktails = ["F", "G", "H", "I", "J"]
-        self.spirits   = ["K", "L", "M", "N", "O"]
-        self.wines     = ["P", "Q", "R", "S", "T"]
+        self.beers     = [" A", " B", " C", " D", " E"]
+        self.cocktails = [" F", " G", " H", " I", " J"]
+        self.spirits   = [" K", " L", " M", " N", " O"]
+        self.wines     = [" P", " Q", " R", " S", " T"]
         self.allDrinks = self.beers + self.cocktails + self.spirits + self.wines
         
         self.categoryMap = [self.allDrinks, self.beers, self.cocktails, self.spirits, self.wines]
@@ -41,7 +41,7 @@ class MainApp:
         
         self.fnt = tkFont.Font(master, size=20, family="Noto Sans")
     
-        self.catlabel = Label(master, text="Type of drink")
+        self.catlabel = Label(master, text="Drink category")
         self.catlabel["font"] = self.fnt
         self.catlabel.grid(row=0, column=0)
         
@@ -196,10 +196,12 @@ class MainApp:
     def resetOrderBox(self):
         self.emptyOrder()
         self.orderbox["bg"] = "paleturquoise"
+        self.orderbox["selectbackground"] = "light cyan"
         
     def sendOrder(self, evt):
         if self.order:
-            self.orderbox["bg"] = "gray"
+            self.orderbox["bg"] = "light gray"
+            self.orderbox["selectbackground"] = "light gray"
             self.infolabel["text"] = "Order sent! The bartender will serve you shortly."
         else:
             self.infolabel["text"] = "Please add some drinks to your order first!"
