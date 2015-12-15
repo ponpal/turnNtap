@@ -23,10 +23,7 @@ class MainApp:
         self.allDrinks = self.beers + self.cocktails + self.spirits + self.wines
         
         self.categoryMap = [self.allDrinks, self.beers, self.cocktails, self.spirits, self.wines]
-
         self.selectedDrink = self.categoryMap[0][0]
-        print self.selectedDrink
-        
         self.order = {} # Dictionary containing ordered drinks and quantities
 
         self.tutorialtext = ("1. Turn wheels to select drink.   " +
@@ -39,7 +36,7 @@ class MainApp:
         self.catPrevious = None
         self.drinkPrevious = None
         
-        self.fnt = tkFont.Font(master, size=20, family="Noto Sans")
+        self.fnt = tkFont.Font(master, size=21, family="Noto Sans")
     
         self.catlabel = Label(master, text="Drink category")
         self.catlabel["font"] = self.fnt
@@ -47,7 +44,8 @@ class MainApp:
         
         self.catbox = Listbox(master, exportselection=0,
                               selectbackground="tomato",
-                              width=self.lbw, height=self.lbh, bd=10)
+                              width=self.lbw, height=self.lbh, bd=10,
+                              highlightthickness=0)
         self.catbox["font"] = self.fnt
         self.catbox.bind('<<ListboxSelect>>', self.onSelect)
         self.catbox.grid(row=1, column=0)
@@ -60,7 +58,8 @@ class MainApp:
     
         self.drinkbox = Listbox(master, exportselection=0,
                                 selectbackground="springgreen",
-                                width=self.lbw, height=self.lbh, bd=10)
+                                width=self.lbw, height=self.lbh, bd=10,
+                                highlightthickness=0)
         self.drinkbox["font"] = self.fnt
         self.drinkbox.bind('<<ListboxSelect>>', self.onSelect)
         self.drinkbox.grid(row=1, column=1)
@@ -161,7 +160,6 @@ class MainApp:
             else:
                 self.orderbox.insert(END, drink + " (" + str(count) + ")")
 
-        print self.selectedDrink
         self.markInOrder(self.selectedDrink)
                 
     def addToOrder(self, evt):
@@ -258,7 +256,7 @@ class ThreadedClient():
         self.queue = Queue.Queue()
         self.running = 1
 
-        self.gui = MainApp(master, self.queue, self.endApplication) 
+        self.gui = MainApp(master, self.queue, self.serialkiller) 
 
         self.thread1 = threading.Thread(target=self.serialreader,
                                         args=(0,"/dev/ttyACM0"))
@@ -278,7 +276,7 @@ class ThreadedClient():
             # some cleanup before actually shutting it down.
             import sys
             sys.exit(1)
-        self.master.after(24, self.periodicCall)
+        self.master.after(5, self.periodicCall)
 
     # Reads a line from the serial input and puts it on the queue
     def serialreader(self, id, port):
@@ -293,8 +291,8 @@ class ThreadedClient():
                 msg = ser.readline()
                 self.queue.put((id, msg))
                 
-    def endApplication(self):
-        self.running = 0
+    def serialkiller(self):
+        self.running = False
         
 if __name__ == "__main__":
     root = Tk()
