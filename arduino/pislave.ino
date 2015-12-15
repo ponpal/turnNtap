@@ -8,8 +8,6 @@
 #define ledPin2 6
 #define ledPin3 7
 
-#define buttonThreshold 250
-
 boolean rwbPressed = false;
 boolean dbPressed = false;
 boolean tbPressed = false;
@@ -61,45 +59,38 @@ void setLeds(int value) {
   digitalWrite(ledPin3, value);
 }
 
-int analogToDigital(int value) {
-  return (value > buttonThreshold) ? HIGH : LOW;
+void handleButtonPresses() {
+  int rightWheelBVal = digitalRead(rightWheelButton);
+  int deleteBVal = digitalRead(deleteButton);
+  int tapBVal = digitalRead(tapButton);
+  
+  if (rightWheelBVal == HIGH) {
+    rwbPressed = true;
+  } else if (rwbPressed && rightWheelBVal == LOW) {
+    Serial.println("rightWheelButton");
+    rwbPressed = false;
+  }
+
+  if (deleteBVal == HIGH) {
+    dbPressed = true;
+  } else if (dbPressed && deleteBVal == LOW) {
+    Serial.println("deleteButton");
+    dbPressed = false;
+  }
+
+  if (tapBVal == HIGH) {
+    tbPressed = true;
+  } else if (tbPressed && tapBVal == LOW) {
+    Serial.println("tapButton");
+    tbPressed = false;
+  }
 }
 
 void loop(void) {
   uint16_t r, g, b, c;
 
-  int rightWheelBVal = digitalRead(rightWheelButton);
-  int deleteBVal = digitalRead(deleteButton);
-  int tapBVal = digitalRead(tapButton);
-
-  if(rightWheelBVal == HIGH) {
-    rwbPressed = true;
-  } 
-
-  if(rwbPressed && rightWheelBVal == LOW) {
-    Serial.println("rightWheelButton");
-    rwbPressed = false;
-  }
-
-  if(deleteBVal == HIGH) {
-    dbPressed = true;
-  }
-
-  if(dbPressed && deleteBVal == LOW) {
-    Serial.println("deleteButton");
-    dbPressed = false;
-  }
-
-  if(tapBVal == HIGH) {
-    tbPressed = true;
-  }
-
-  if(tbPressed && tapBVal == LOW) {
-    Serial.println("tapButton");
-    tbPressed = false;
-  }
+  handleButtonPresses();
   
   tcs.getRawData(&r, &g, &b, &c);
-  
   Serial.println(getColor(r,g,b));
 }
