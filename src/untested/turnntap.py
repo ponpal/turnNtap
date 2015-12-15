@@ -14,15 +14,19 @@ class MainApp:
         self.queue = queue
         self.buttonsActive = True
         
-        self.categories = ["Beer", "Cocktail", "Spirit", "Wine"]
+        self.categories = [" All drinks", " Beer", " Cocktail", " Spirit", " Wine"]
 
         self.beers     = ["A", "B", "C", "D", "E"]
         self.cocktails = ["F", "G", "H", "I", "J"]
         self.spirits   = ["K", "L", "M", "N", "O"]
         self.wines     = ["P", "Q", "R", "S", "T"]
+        self.allDrinks = self.beers + self.cocktails + self.spirits + self.wines
+        
+        self.categoryMap = [self.allDrinks, self.beers, self.cocktails, self.spirits, self.wines]
 
-        self.categoryMap = [self.beers, self.cocktails, self.spirits, self.wines]
-
+        self.selectedDrink = self.categoryMap[0][0]
+        print self.selectedDrink
+        
         self.order = {} # Dictionary containing ordered drinks and quantities
 
         self.tutorialtext = ("1. Turn wheels to select drink.   " +
@@ -58,6 +62,7 @@ class MainApp:
                                 selectbackground="springgreen",
                                 width=self.lbw, height=self.lbh, bd=10)
         self.drinkbox["font"] = self.fnt
+        self.drinkbox.bind('<<ListboxSelect>>', self.onSelect)
         self.drinkbox.grid(row=1, column=1)
         self.drinkbox.insert(END, *self.categoryMap[0])
             
@@ -65,7 +70,7 @@ class MainApp:
         self.orderlabel["font"] = self.fnt
         self.orderlabel.grid(row=0, column=2)
 
-        self.orderbox = Listbox(master, width=self.lbw,
+        self.orderbox = Listbox(master, selectbackground="light cyan", width=self.lbw,
                                 height=self.lbh, bd=10, bg="paleturquoise")
         self.orderbox["font"] = self.fnt
         self.orderbox.grid(row=1, column=2)
@@ -130,13 +135,11 @@ class MainApp:
         if ((prev == "G" and color == "R") or
             (prev == "R" and color == "B") or
             (prev == "B" and color == "G")):
-            #self.rotateCounterClockwise(threadId, color)
             self.rotate(listbox, -1)
                
         if ((prev == "B" and color == "R") or
             (prev == "R" and color == "G") or
             (prev == "G" and color == "B")):
-            #self.rotateClockwise(threadId, color)
             self.rotate(listbox, 1)
 
     def rotate(self, listbox, rotation):
@@ -144,11 +147,6 @@ class MainApp:
         current = listbox.curselection()[0]
         listbox.selection_clear(0, END)
         next = (current + rotation) % listbox.size()
-
-        #print "Current: %d" % current + "\tRotation: %d" % rotation
-        #print "Going to: %d" % next
-        #print ""
-
         listbox.selection_set(next)
             
     # Called whenever a change is made to the order to update UI
@@ -163,6 +161,9 @@ class MainApp:
             else:
                 self.orderbox.insert(END, drink + " (" + str(count) + ")")
 
+        print self.selectedDrink
+        self.markInOrder(self.selectedDrink)
+                
     def addToOrder(self, evt):
         drink = self.drinkbox.get(self.drinkbox.curselection()[0])
 
@@ -213,11 +214,28 @@ class MainApp:
     def onSelect(self, evt):
         w = evt.widget
         index = int(w.curselection()[0])
+        value = w.get(index)
 
-        self.drinkbox.delete(0, END)
-        self.drinkbox.insert(0, *self.categoryMap[index])
-        self.drinkbox.selection_set(0)
-        self.drinkbox.activate(0)
+        if w == self.catbox:
+            self.drinkbox.delete(0, END)
+            self.drinkbox.insert(0, *self.categoryMap[index])
+            self.drinkbox.selection_set(0)
+            self.drinkbox.activate(0)
+
+            self.selectedDrink = self.categoryMap[index][0]
+
+            self.updateOrderListBox()
+        else:
+            self.markInOrder(value)
+            self.selectedDrink = value
+            
+    def markInOrder(self, selected):
+        sortedOrder = collections.OrderedDict(sorted(self.order.items()))
+        if selected in sortedOrder:
+            self.orderbox.selection_clear(0, END)
+            self.orderbox.selection_set(sortedOrder.keys().index(selected))
+        else:
+            self.orderbox.selection_clear(0, END)
 
     def activateButtons(self):
         self.buttonsActive = True
@@ -266,9 +284,9 @@ class ThreadedClient():
             ser = serial.Serial(port, 9600)
         except serial.SerialException:
             print ("Couldn't open serial communication port (" +
-                   port  + "), please check your connections.")
+                   port  + "), please check your connections.\n")
         else:
-            print "Successfully started thread %d" % id + "."
+            print "Successfully started thread %d" % id + ".\n"
             while self.running:
                 msg = ser.readline()
                 self.queue.put((id, msg))
@@ -280,3 +298,4 @@ if __name__ == "__main__":
     root = Tk()
     client = ThreadedClient(root)
     root.mainloop()
+    
