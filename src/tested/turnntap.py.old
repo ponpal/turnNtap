@@ -8,10 +8,11 @@ import Queue
 
 class MainApp:
     def __init__(self, master, queue, endCommand):
-        self.queue = queue
-        
         self.master = master
-        master.title("Turn N Tap (Exclusive Beta)")
+        self.master.title("Turn N Tap (Exclusive Beta)")
+
+        self.queue = queue
+        self.buttonsActive = True
         
         self.categories = ["Beer", "Cocktail", "Spirit", "Wine"]
 
@@ -25,13 +26,14 @@ class MainApp:
         self.order = {} # Dictionary containing ordered drinks and quantities
 
         self.tutorialtext = ("1. Turn wheels to select drink.   " +
-                             "2. Press right wheel to add drink to order.   3. Pull tap to order.")
+                             "2. Press the green wheel to add drink to order.   " + 
+                             "3. Pull tap to order.")
 
         self.lbw = 26 # Listbox width in characters
         self.lbh = 14 # Listbox height in rows
 
-        self.catPrevious = "None"
-        self.drinkPrevious = "None"
+        self.catPrevious = None
+        self.drinkPrevious = None
         
         self.fnt = tkFont.Font(master, size=20, family="Noto Sans")
     
@@ -40,7 +42,7 @@ class MainApp:
         self.catlabel.grid(row=0, column=0)
         
         self.catbox = Listbox(master, exportselection=0,
-                              selectbackground="orangered",
+                              selectbackground="tomato",
                               width=self.lbw, height=self.lbh, bd=10)
         self.catbox["font"] = self.fnt
         self.catbox.bind('<<ListboxSelect>>', self.onSelect)
@@ -53,7 +55,7 @@ class MainApp:
         self.drinklabel.grid(row=0, column=1)
     
         self.drinkbox = Listbox(master, exportselection=0,
-                                selectbackground="lime",
+                                selectbackground="springgreen",
                                 width=self.lbw, height=self.lbh, bd=10)
         self.drinkbox["font"] = self.fnt
         self.drinkbox.grid(row=1, column=1)
@@ -63,7 +65,8 @@ class MainApp:
         self.orderlabel["font"] = self.fnt
         self.orderlabel.grid(row=0, column=2)
 
-        self.orderbox = Listbox(master, width=self.lbw, height=self.lbh, bd=10, bg="paleturquoise")
+        self.orderbox = Listbox(master, width=self.lbw,
+                                height=self.lbh, bd=10, bg="paleturquoise")
         self.orderbox["font"] = self.fnt
         self.orderbox.grid(row=1, column=2)
         self.orderbox["takefocus"] = 0
@@ -72,112 +75,81 @@ class MainApp:
         self.infolabel["font"] = self.fnt
         self.infolabel.grid(row=2, columnspan=3)
 
-        master.grid_columnconfigure(0, weight=1)
-        master.grid_columnconfigure(1, weight=1)
-        master.grid_columnconfigure(2, weight=1)
+        self.master.grid_columnconfigure(0, weight=1)
+        self.master.grid_columnconfigure(1, weight=1)
+        self.master.grid_columnconfigure(2, weight=1)
 
-        master.grid_rowconfigure(0, weight=1)
-        master.grid_rowconfigure(1, weight=1)
-        master.grid_rowconfigure(2, weight=4)
+        self.master.grid_rowconfigure(0, weight=1)
+        self.master.grid_rowconfigure(1, weight=1)
+        self.master.grid_rowconfigure(2, weight=4)
 
         self.catbox.focus_set()
         self.catbox.selection_set(0)
         self.drinkbox.selection_set(0)
         self.drinkbox.activate(0)
-        master.bind('<space>', self.addToOrder)
-        master.bind('<Delete>', self.removeFromOrder)
-        master.bind('<Return>', self.sendOrder)
+
+        self.activateButtons()
 
     def processIncoming(self):
         """Handle all messages currently in the queue, if any."""
         while self.queue.qsize():
             try:
                 msg = self.queue.get(0)
-
                 threadId = msg[0]
-                color = msg[1].strip()
-                
-                print "Value from queue: "
-                print threadId
+                data = msg[1].strip()
 
-                c = ["R", "G", "B"]
-                    
-                print type(color)
-                print color in c
-                print color
-                print c
+                #print "Thread: %d" % threadId + "\tMessage: " + data
                 
-                if color in c:
-                    print color
-
+                if data in ["R", "G", "B"]:
                     if threadId == 0:
-                        if self.catPrevious == "None":
-                            self.catPrevious = color
-                        else:
-                            self.processRotation(color, self.catPrevious, threadId)
+                        if self.catPrevious != None:
+                            self.processRotation(data, self.catPrevious, self.catbox)
+                            
+                        self.catPrevious = data
                     else:
-                        if self.drinkPrevious == "None":
-                            self.drinkPrevious = color
-                        else:
-                            self.processRotation(color, self.drinkPrevious, threadId)
+                        if self.drinkPrevious != None:
+                            self.processRotation(data, self.drinkPrevious, self.drinkbox)
+
+                        self.drinkPrevious = data
                 else:
-                    pass
-                    #pressButton(threadId)
-                
-                # Check contents of message and do whatever is needed. As a
-                # simple test, print it (in real life, you would
-                # suitably update the GUI's display in a richer fashion).
+                    if self.buttonsActive:
+                        if data == "rightWheelButton":
+                            self.addToOrder(None)
+                        elif data == "deleteButton":
+                            self.removeFromOrder(None)
+                        elif data == "tapButton":
+                            self.sendOrder(None)
+                        else:
+                            pass
             except Queue.Empty:
                 # just on general principles, although we don't
                 # expect this branch to be taken in this case
                 pass
 
-    def processRotation(self, color, prev, threadId):
-            if ((prev == "G" and color == "R") or
-                (prev == "R" and color == "B") or
-                (prev == "B" and color == "G")):
-               self.rotateCounterClockwise(threadId, color)
+    def processRotation(self, color, prev, listbox):
+        if ((prev == "G" and color == "R") or
+            (prev == "R" and color == "B") or
+            (prev == "B" and color == "G")):
+            #self.rotateCounterClockwise(threadId, color)
+            self.rotate(listbox, -1)
                
-            if ((prev == "B" and color == "R") or
-                (prev == "R" and color == "G") or
-                (prev == "G" and color == "B")):
-               self.rotateClockwise(threadId, color)
+        if ((prev == "B" and color == "R") or
+            (prev == "R" and color == "G") or
+            (prev == "G" and color == "B")):
+            #self.rotateClockwise(threadId, color)
+            self.rotate(listbox, 1)
 
-    def rotateCounterClockwise(self, id, color):
-        if id == 0:
-            self.catbox.focus_set()
-            current = self.catbox.curselection()[0]
-            if current > 0:
-                self.catbox.selection_clear(0, END)
-                self.catbox.selection_set(current - 1)
+    def rotate(self, listbox, rotation):
+        listbox.focus_set()
+        current = listbox.curselection()[0]
+        listbox.selection_clear(0, END)
+        next = (current + rotation) % listbox.size()
 
-            self.catPrevious = color
-        else:
-            self.drinkbox.focus_set()
-            current = self.drinkbox.curselection()[0]
-            if current < 0:
-                self.drinkbox.selection_clear(0, END)
-                self.drinkbox.selection_set(current - 1)
+        #print "Current: %d" % current + "\tRotation: %d" % rotation
+        #print "Going to: %d" % next
+        #print ""
 
-            self.drinkPrevious = color
-                
-    def rotateClockwise(self, id, color):
-        if id == 0:
-            self.catbox.focus_set()
-            current = self.catbox.curselection()[0]
-            if current < self.catbox.size() - 1:
-                self.catbox.selection_clear(0, END)
-                self.catbox.selection_set(current + 1)
-
-            self.catPrevious = color
-        else:
-            self.drinkbox.focus_set()
-            current = self.drinkbox.curselection()[0]
-            if current < self.drinkbox.size() - 1:
-                self.drinkbox.selection_clear(0, END)
-                self.drinkbox.selection_set(current + 1)
-
-            self.drinkPrevious = color
+        listbox.selection_set(next)
             
     # Called whenever a change is made to the order to update UI
     def updateOrderListBox(self):
@@ -219,15 +191,23 @@ class MainApp:
 
     def resetinfolabel(self):
         self.infolabel["text"] = self.tutorialtext
+
+    def resetOrderBox(self):
+        self.emptyOrder()
+        self.orderbox["bg"] = "paleturquoise"
         
     def sendOrder(self, evt):
         if self.order:
-            self.emptyOrder()
+            self.orderbox["bg"] = "gray"
             self.infolabel["text"] = "Order sent! The bartender will serve you shortly."
         else:
             self.infolabel["text"] = "Please add some drinks to your order first!"
 
-        Timer(5, self.resetinfolabel, ()).start()
+        self.deactivateButtons()
+            
+        Timer(3, self.resetinfolabel, ()).start()
+        Timer(3, self.activateButtons, ()).start()
+        Timer(3, self.resetOrderBox, ()).start()
 
     # Update drink selection according to category
     def onSelect(self, evt):
@@ -239,6 +219,18 @@ class MainApp:
         self.drinkbox.selection_set(0)
         self.drinkbox.activate(0)
 
+    def activateButtons(self):
+        self.buttonsActive = True
+        self.master.bind('<space>', self.addToOrder)
+        self.master.bind('<Delete>', self.removeFromOrder)
+        self.master.bind('<Return>', self.sendOrder)
+
+    def deactivateButtons(self):
+        self.buttonsActive = False
+        self.master.unbind('<space>')
+        self.master.unbind('<Delete>')
+        self.master.unbind('<Return>')  
+
 class ThreadedClient():
     def __init__(self, master):
         self.master = master
@@ -247,13 +239,15 @@ class ThreadedClient():
         self.running = 1
 
         self.gui = MainApp(master, self.queue, self.endApplication) 
-        
-        self.thread1 = threading.Thread(target=self.slave, args=(0,"/dev/ttyACM0"))
+
+        self.thread1 = threading.Thread(target=self.serialreader,
+                                        args=(0,"/dev/ttyACM0"))
         self.thread1.start()
         
-        #self.thread2 = threading.Thread(target=self.slave, args=("/dev/ttyACM1",))
-        #self.thread2.start()
-        
+        self.thread2 = threading.Thread(target=self.serialreader,
+                                        args=(1, "/dev/ttyUSB0"))
+        self.thread2.start()
+                    
         self.periodicCall()
 
     # Check if queue has any data
@@ -264,22 +258,25 @@ class ThreadedClient():
             # some cleanup before actually shutting it down.
             import sys
             sys.exit(1)
-        self.master.after(200, self.periodicCall)
-        
-    def slave(self, id, port):
-        print "started a slave"
-        ser = serial.Serial(port, 9600)
-        while self.running:
-            msg = ser.readline()
-            print msg
-            self.queue.put((id, msg))
+        self.master.after(24, self.periodicCall)
+
+    # Reads a line from the serial input and puts it on the queue
+    def serialreader(self, id, port):
+        try:
+            ser = serial.Serial(port, 9600)
+        except serial.SerialException:
+            print ("Couldn't open serial communication port (" +
+                   port  + "), please check your connections.")
+        else:
+            print "Successfully started thread %d" % id + "."
+            while self.running:
+                msg = ser.readline()
+                self.queue.put((id, msg))
                 
     def endApplication(self):
         self.running = 0
         
 if __name__ == "__main__":
     root = Tk()
-
     client = ThreadedClient(root)
     root.mainloop()
-    

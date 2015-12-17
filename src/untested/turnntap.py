@@ -109,7 +109,7 @@ class MainApp:
                 print "Thread: %d" % threadId + "\tMessage: " + data
                 
                 if data in ["R", "G", "B"]:
-                    if threadId == 1:
+                    if threadId == 0:
                         if self.catPrevious != None:
                             self.processRotation(data, self.catPrevious,
                                                  self.catbox)

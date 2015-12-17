@@ -14,19 +14,23 @@ class MainApp:
         self.queue = queue
         self.buttonsActive = True
         
-        self.categories = ["Beer", "Cocktail", "Spirit", "Wine"]
+        self.categories = [" All drinks", " Beers", " Cocktails",
+                           " Spirits", " Wines"]
+        self.positions = [0, 0, 0, 0, 0]
 
-        self.beers     = ["A", "B", "C", "D", "E"]
-        self.cocktails = ["F", "G", "H", "I", "J"]
-        self.spirits   = ["K", "L", "M", "N", "O"]
-        self.wines     = ["P", "Q", "R", "S", "T"]
-
-        self.categoryMap = [self.beers, self.cocktails, self.spirits, self.wines]
-
+        self.beers     = [" A", " B", " C", " D", " E"]
+        self.cocktails = [" F", " G", " H", " I", " J"]
+        self.spirits   = [" K", " L", " M", " N", " O"]
+        self.wines     = [" P", " Q", " R", " S", " T"]
+        self.allDrinks = self.beers + self.cocktails + self.spirits + self.wines
+        
+        self.categoryMap = [self.allDrinks, self.beers, self.cocktails,
+                            self.spirits, self.wines]
+        self.selectedDrink = self.categoryMap[0][0]
         self.order = {} # Dictionary containing ordered drinks and quantities
 
         self.tutorialtext = ("1. Turn wheels to select drink.   " +
-                             "2. Press the green wheel to add drink to order.   " + 
+                             "2. Press the + button to add drink to order.   " + 
                              "3. Pull tap to order.")
 
         self.lbw = 26 # Listbox width in characters
@@ -35,15 +39,16 @@ class MainApp:
         self.catPrevious = None
         self.drinkPrevious = None
         
-        self.fnt = tkFont.Font(master, size=20, family="Noto Sans")
+        self.fnt = tkFont.Font(master, size=21, family="Noto Sans")
     
-        self.catlabel = Label(master, text="Type of drink")
+        self.catlabel = Label(master, text="Drink category")
         self.catlabel["font"] = self.fnt
         self.catlabel.grid(row=0, column=0)
         
         self.catbox = Listbox(master, exportselection=0,
                               selectbackground="tomato",
-                              width=self.lbw, height=self.lbh, bd=10)
+                              width=self.lbw, height=self.lbh, bd=10,
+                              highlightthickness=0)
         self.catbox["font"] = self.fnt
         self.catbox.bind('<<ListboxSelect>>', self.onSelect)
         self.catbox.grid(row=1, column=0)
@@ -56,8 +61,10 @@ class MainApp:
     
         self.drinkbox = Listbox(master, exportselection=0,
                                 selectbackground="springgreen",
-                                width=self.lbw, height=self.lbh, bd=10)
+                                width=self.lbw, height=self.lbh, bd=10,
+                                highlightthickness=0)
         self.drinkbox["font"] = self.fnt
+        self.drinkbox.bind('<<ListboxSelect>>', self.onSelect)
         self.drinkbox.grid(row=1, column=1)
         self.drinkbox.insert(END, *self.categoryMap[0])
             
@@ -65,8 +72,9 @@ class MainApp:
         self.orderlabel["font"] = self.fnt
         self.orderlabel.grid(row=0, column=2)
 
-        self.orderbox = Listbox(master, width=self.lbw,
-                                height=self.lbh, bd=10, bg="paleturquoise")
+        self.orderbox = Listbox(master, selectbackground="light cyan",
+                                width=self.lbw, height=self.lbh, bd=10,
+                                bg="paleturquoise")
         self.orderbox["font"] = self.fnt
         self.orderbox.grid(row=1, column=2)
         self.orderbox["takefocus"] = 0
@@ -98,17 +106,19 @@ class MainApp:
                 threadId = msg[0]
                 data = msg[1].strip()
 
-                #print "Thread: %d" % threadId + "\tMessage: " + data
+                print "Thread: %d" % threadId + "\tMessage: " + data
                 
                 if data in ["R", "G", "B"]:
                     if threadId == 0:
                         if self.catPrevious != None:
-                            self.processRotation(data, self.catPrevious, self.catbox)
+                            self.processRotation(data, self.catPrevious,
+                                                 self.catbox)
                             
                         self.catPrevious = data
                     else:
                         if self.drinkPrevious != None:
-                            self.processRotation(data, self.drinkPrevious, self.drinkbox)
+                            self.processRotation(data, self.drinkPrevious,
+                                                 self.drinkbox)
 
                         self.drinkPrevious = data
                 else:
@@ -130,13 +140,11 @@ class MainApp:
         if ((prev == "G" and color == "R") or
             (prev == "R" and color == "B") or
             (prev == "B" and color == "G")):
-            #self.rotateCounterClockwise(threadId, color)
             self.rotate(listbox, -1)
                
         if ((prev == "B" and color == "R") or
             (prev == "R" and color == "G") or
             (prev == "G" and color == "B")):
-            #self.rotateClockwise(threadId, color)
             self.rotate(listbox, 1)
 
     def rotate(self, listbox, rotation):
@@ -144,12 +152,11 @@ class MainApp:
         current = listbox.curselection()[0]
         listbox.selection_clear(0, END)
         next = (current + rotation) % listbox.size()
-
-        #print "Current: %d" % current + "\tRotation: %d" % rotation
-        #print "Going to: %d" % next
-        #print ""
-
         listbox.selection_set(next)
+        listbox.activate(next)
+        listbox.see(next)
+        
+        self.onSelect2(listbox, next)
             
     # Called whenever a change is made to the order to update UI
     def updateOrderListBox(self):
@@ -163,6 +170,8 @@ class MainApp:
             else:
                 self.orderbox.insert(END, drink + " (" + str(count) + ")")
 
+        self.markInOrder(self.selectedDrink)
+                
     def addToOrder(self, evt):
         drink = self.drinkbox.get(self.drinkbox.curselection()[0])
 
@@ -195,11 +204,26 @@ class MainApp:
     def resetOrderBox(self):
         self.emptyOrder()
         self.orderbox["bg"] = "paleturquoise"
-        
+        self.orderbox["selectbackground"] = "light cyan"
+
+    def resetPositions(self):
+        for i, v in enumerate(self.positions):
+            self.positions[i] = 0
+
+        self.catbox.selection_clear(0, END)
+        self.catbox.selection_set(0)
+        self.catbox.activate(0)
+        self.drinkbox.selection_clear(0, END)
+        self.drinkbox.selection_set(0)
+        self.drinkbox.activate(0)
+        self.select(self.catbox, 0, "")
+            
     def sendOrder(self, evt):
         if self.order:
-            self.orderbox["bg"] = "gray"
-            self.infolabel["text"] = "Order sent! The bartender will serve you shortly."
+            self.orderbox["bg"] = "light gray"
+            self.orderbox["selectbackground"] = "light gray"
+            self.infolabel["text"] = ("Order sent! " +
+                                      "The bartender will serve you shortly.")
         else:
             self.infolabel["text"] = "Please add some drinks to your order first!"
 
@@ -208,22 +232,59 @@ class MainApp:
         Timer(3, self.resetinfolabel, ()).start()
         Timer(3, self.activateButtons, ()).start()
         Timer(3, self.resetOrderBox, ()).start()
+        Timer(3, self.resetPositions, ()).start()
 
     # Update drink selection according to category
     def onSelect(self, evt):
         w = evt.widget
         index = int(w.curselection()[0])
+        value = w.get(index)
 
-        self.drinkbox.delete(0, END)
-        self.drinkbox.insert(0, *self.categoryMap[index])
-        self.drinkbox.selection_set(0)
-        self.drinkbox.activate(0)
+        self.select(w, index, value)
+
+    def onSelect2(self, listbox, index):
+        value = listbox.get(index)
+
+        self.select(listbox, index, value)
+        
+    def select(self, listbox, index, value):
+        if listbox == self.drinkbox:
+            self.markInOrder(value)
+            self.selectedDrink = value
+            self.positions[self.catbox.curselection()[0]] = index
+            
+        elif listbox == self.catbox:
+            self.drinkbox.delete(0, END)
+            self.drinkbox.insert(0, *self.categoryMap[index])
+            self.drinkbox.selection_set(self.positions[index])
+            self.drinkbox.activate(self.positions[index])
+            self.drinkbox.see(self.positions[index])
+
+            self.selectedDrink = self.categoryMap[index][self.positions[index]]
+
+            self.updateOrderListBox()
+            
+    def markInOrder(self, selected):
+        sortedOrder = collections.OrderedDict(sorted(self.order.items()))
+        if selected in sortedOrder:
+            self.orderbox.selection_clear(0, END)
+            self.orderbox.selection_set(sortedOrder.keys().index(selected))
+        else:
+            self.orderbox.selection_clear(0, END)
 
     def activateButtons(self):
         self.buttonsActive = True
         self.master.bind('<space>', self.addToOrder)
         self.master.bind('<Delete>', self.removeFromOrder)
         self.master.bind('<Return>', self.sendOrder)
+        self.master.bind('<w>', lambda e, l = self.catbox, r = -1:
+                         self.buttonRotate(e, l, r))
+        self.master.bind('<s>', lambda e, l = self.catbox, r = 1:
+                         self.buttonRotate(e, l, r))
+        self.master.bind('<o>', lambda e, l = self.drinkbox, r = -1:
+                         self.buttonRotate(e, l, r))
+        self.master.bind('<l>', lambda e, l = self.drinkbox, r = 1:
+                         self.buttonRotate(e, l, r))
 
     def deactivateButtons(self):
         self.buttonsActive = False
@@ -231,6 +292,9 @@ class MainApp:
         self.master.unbind('<Delete>')
         self.master.unbind('<Return>')  
 
+    def buttonRotate(self, event, listbox, direction):
+        self.rotate(listbox, direction)
+        
 class ThreadedClient():
     def __init__(self, master):
         self.master = master
@@ -238,7 +302,7 @@ class ThreadedClient():
         self.queue = Queue.Queue()
         self.running = 1
 
-        self.gui = MainApp(master, self.queue, self.endApplication) 
+        self.gui = MainApp(master, self.queue, self.serialkiller) 
 
         self.thread1 = threading.Thread(target=self.serialreader,
                                         args=(0,"/dev/ttyACM0"))
@@ -258,7 +322,7 @@ class ThreadedClient():
             # some cleanup before actually shutting it down.
             import sys
             sys.exit(1)
-        self.master.after(24, self.periodicCall)
+        self.master.after(5, self.periodicCall)
 
     # Reads a line from the serial input and puts it on the queue
     def serialreader(self, id, port):
@@ -266,17 +330,18 @@ class ThreadedClient():
             ser = serial.Serial(port, 9600)
         except serial.SerialException:
             print ("Couldn't open serial communication port (" +
-                   port  + "), please check your connections.")
+                   port  + "), please check your connections.\n")
         else:
-            print "Successfully started thread %d" % id + "."
+            print "Successfully started thread %d" % id + ".\n"
             while self.running:
                 msg = ser.readline()
                 self.queue.put((id, msg))
                 
-    def endApplication(self):
-        self.running = 0
+    def serialkiller(self):
+        self.running = False
         
 if __name__ == "__main__":
     root = Tk()
     client = ThreadedClient(root)
     root.mainloop()
+    
