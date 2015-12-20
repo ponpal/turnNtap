@@ -55,7 +55,7 @@ class MainApp:
         for x in self.categories:
             self.catbox.insert(END, x)
             
-        self.drinklabel = Label(master, text="Drink")
+        self.drinklabel = Label(master, text="Your order")
         self.drinklabel["font"] = self.fnt
         self.drinklabel.grid(row=0, column=1)
     
@@ -65,10 +65,10 @@ class MainApp:
                                 highlightthickness=0)
         self.drinkbox["font"] = self.fnt
         self.drinkbox.bind('<<ListboxSelect>>', self.onSelect)
-        self.drinkbox.grid(row=1, column=1)
+        self.drinkbox.grid(row=1, column=2)
         self.drinkbox.insert(END, *self.categoryMap[0])
             
-        self.orderlabel = Label(master, text="Your order")
+        self.orderlabel = Label(master, text="Drink")
         self.orderlabel["font"] = self.fnt
         self.orderlabel.grid(row=0, column=2)
 
@@ -76,7 +76,7 @@ class MainApp:
                                 width=self.lbw, height=self.lbh, bd=10,
                                 bg="paleturquoise")
         self.orderbox["font"] = self.fnt
-        self.orderbox.grid(row=1, column=2)
+        self.orderbox.grid(row=1, column=1)
         self.orderbox["takefocus"] = 0
 
         self.infolabel = Label(master, text=self.tutorialtext)
@@ -105,11 +105,9 @@ class MainApp:
                 msg = self.queue.get(0)
                 threadId = msg[0]
                 data = msg[1].strip()
-
-                print "Thread: %d" % threadId + "\tMessage: " + data
                 
                 if data in ["R", "G", "B"]:
-                    if threadId == 0:
+                    if threadId == 1:
                         if self.catPrevious != None:
                             self.processRotation(data, self.catPrevious,
                                                  self.catbox)
@@ -122,8 +120,9 @@ class MainApp:
 
                         self.drinkPrevious = data
                 else:
+                    print "Thread: %d" % threadId + "\tMessage: " + data
                     if self.buttonsActive:
-                        if data == "rightWheelButton":
+                        if data == "addButton":
                             self.addToOrder(None)
                         elif data == "deleteButton":
                             self.removeFromOrder(None)
@@ -131,6 +130,10 @@ class MainApp:
                             self.sendOrder(None)
                         else:
                             pass
+
+                        self.deactivateButtons()
+                        Timer(0.1, self.activateButtons, ()).start()
+                        
             except Queue.Empty:
                 # just on general principles, although we don't
                 # expect this branch to be taken in this case
@@ -301,16 +304,16 @@ class ThreadedClient():
         
         self.queue = Queue.Queue()
         self.running = 1
-
+        
         self.gui = MainApp(master, self.queue, self.serialkiller) 
 
-        self.thread1 = threading.Thread(target=self.serialreader,
+        self.thread0 = threading.Thread(target=self.serialreader,
                                         args=(0,"/dev/ttyACM0"))
-        self.thread1.start()
+        self.thread0.start()
         
-        self.thread2 = threading.Thread(target=self.serialreader,
+        self.thread1 = threading.Thread(target=self.serialreader,
                                         args=(1, "/dev/ttyUSB0"))
-        self.thread2.start()
+        self.thread1.start()
                     
         self.periodicCall()
 
