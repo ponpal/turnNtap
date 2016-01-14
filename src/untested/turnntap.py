@@ -18,11 +18,19 @@ class MainApp:
                            " Spirits", " Wines"]
         self.positions = [0, 0, 0, 0, 0]
 
-        self.beers     = [" A", " B", " C", " D", " E"]
-        self.cocktails = [" F", " G", " H", " I", " J"]
-        self.spirits   = [" K", " L", " M", " N", " O"]
-        self.wines     = [" P", " Q", " R", " S", " T"]
+        self.beers     = [" HelVete", " Innis & Gunn", " Guiness", " Sierra Nevada Pale Ale", " Falcon Export"]
+        self.cocktails = [" Martini", " Jack & Coke", " Three Wise Men", " Kamikaze", " Gin & Tonic"]
+        self.spirits   = [" Aberlour A'bunadh", " Laphroaig 18 yrs", " Lagavulin 16 yrs", " Mortlach 24 yrs", " Dram"]
+        self.wines     = [" San Mal", " Passo Rosso", " A Coroa Gordello", " Astobiza", " Light as a Feather"]
+
+        self.beers.sort()
+        self.cocktails.sort()
+        self.spirits.sort()
+        self.wines.sort()
+        
         self.allDrinks = self.beers + self.cocktails + self.spirits + self.wines
+
+        self.allDrinks.sort()
         
         self.categoryMap = [self.allDrinks, self.beers, self.cocktails,
                             self.spirits, self.wines]
